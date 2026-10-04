@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure Lab Geocacher Training App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Outfit & Space Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Mono', 'monospace'],
+                    },
+                    colors: {
+                        gc: {
+                            green: '#2e7d32',
+                            lightgreen: '#4caf50',
+                            darkgreen: '#1b5e20',
+                            lab: '#0288d1',
+                            labteal: '#00a896',
+                            lablight: '#03a9f4',
+                            amber: '#f59e0b',
+                            wood: '#512da8',
+                            paper: '#fdfbf7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .compass-ring {
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .logbook-texture {
+            background-color: #fcf9f2;
+            background-image: radial-gradient(#e5decf 0.8px, transparent 0.8px);
+            background-size: 14px 14px;
+        }
+        .stamp-rotate {
+            transform: rotate(-6deg);
+        }
+        .radar-pulse {
+            animation: radarPulse 2s infinite ease-out;
+        }
+        @keyframes radarPulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.3; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        /* Custom scrollbar for light theme */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans selection:bg-gc-lab selection:text-white bg-slate-50 text-slate-800">
+
+    <!-- Top Bar Navigation (Original Lab App Teal Gradient Header) -->
+    <header class="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 border-b border-sky-800 text-white px-4 py-3 sticky top-0 z-40 shadow-md">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-teal-400 to-sky-400 flex items-center justify-center text-slate-950 shadow-md shadow-cyan-500/30">
+                    <i class="fa-solid fa-flask-vial text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none text-white tracking-wide flex items-center gap-2">
+                        Adventure-Lab Quiz <span class="bg-teal-500/20 text-cyan-300 text-[10px] font-mono px-2 py-0.5 rounded border border-cyan-400/30 font-bold uppercase">by 4Lanfis</span>
+                    </h1>
+                    <p class="text-xs text-sky-200/80 mt-0.5">Geocaching® Einsteiger-Training</p>
+                </div>
+            </div>
+
+            <!-- Header Live Counters -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="app.instantWin()" title="Passcode-Bildschirm anzeigen" class="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 px-2.5 py-1.5 rounded-xl text-xs font-mono text-amber-300 transition-all shadow-sm">
+                    <i class="fa-solid fa-key text-amber-400"></i>
+                    <span class="hidden sm:inline font-semibold">Passcode Vorschau</span>
+                </button>
+
+                <!-- Live Stopwatch Badge -->
+                <div class="flex items-center gap-2 bg-slate-800/80 border border-sky-700/50 px-3 py-1.5 rounded-xl text-xs font-mono text-cyan-300 shadow-inner">
+                    <i class="fa-regular fa-clock text-cyan-400 animate-pulse"></i>
+                    <span id="live-timer" class="font-bold">00:00</span>
+                </div>
+
+                <!-- Live Score Counter -->
+                <div class="bg-emerald-950/60 border border-emerald-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2 text-xs font-mono">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <span id="score-counter" class="font-bold text-emerald-300">0 / 15</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Layout Container -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
+
+        <!-- ================= START SCREEN ================= -->
+        <div id="screen-start" class="bg-white border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-200/60 overflow-hidden transition-all duration-300">
+            
+            <!-- Adventure Cover Banner Image (Simulated Official Lab App Header) -->
+            <div class="h-48 sm:h-56 bg-gradient-to-r from-sky-600 via-teal-600 to-emerald-700 relative flex items-end p-6 overflow-hidden">
+                <!-- Background Graphic Overlay -->
+                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-black/40"></div>
+                <div class="absolute right-4 bottom-2 text-white/10 text-9xl pointer-events-none font-extrabold">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+
+                <!-- Adventure Badges -->
+                <div class="relative z-10 w-full flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-white">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="bg-amber-400 text-slate-950 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-star"></i> 4.9 (128 Logs)
+                            </span>
+                            <span class="bg-black/30 backdrop-blur-md text-white/90 text-xs px-2.5 py-0.5 rounded-full border border-white/20">
+                                15 Standorte • ~45 Min
+                            </span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-white drop-shadow-md">
+                            Adventure-Lab Quiz
+                        </h2>
+                        <p class="text-xs sm:text-sm text-cyan-100 font-medium">by 4Lanfis</p>
+                    </div>
+
+                    <div class="flex items-center gap-1 text-amber-300 text-xs">
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Content Body -->
+            <div class="p-6 sm:p-8">
+                <p class="text-slate-600 text-base leading-relaxed mb-6">
+                    Willkommen zum **Adventure-Lab Quiz**! Absolviere alle 15 Standorte virtuell, lerne die Regeln kennen und schalte am Ende den **Checker-Passcode** frei. <strong class="text-rose-600">Achtung:</strong> Bei einer falschen Antwort wirst du direkt zu Station 1 zurückgeworfen!
+                </p>
+
+                <!-- Features Highlights (Lab Style) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+                    <div class="bg-sky-50/60 border border-sky-200/80 p-3.5 rounded-2xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 text-lg shadow-sm">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                        </div>
+                        <div class="text-xs">
+                            <div class="font-bold text-slate-800">Geofencing & GPS</div>
+                            <div class="text-slate-500">Live Entfernungs-Sim</div>
+                        </div>
+                    </div>
+                    <div class="bg-teal-50/60 border border-teal-200/80 p-3.5 rounded-2xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 text-lg shadow-sm">
+                            <i class="fa-solid fa-book-journal-whills"></i>
+                        </div>
+                        <div class="text-xs">
+                            <div class="font-bold text-slate-800">Tagebuch-Einträge</div>
+                            <div class="text-slate-500">Exklusive Lab-Stories</div>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50/60 border border-amber-200/80 p-3.5 rounded-2xl flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 text-lg shadow-sm">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                        <div class="text-xs">
+                            <div class="font-bold text-slate-800">Geheim-Passcode</div>
+                            <div class="text-slate-500">Für den Bonus-Cache</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start Action Button -->
+                <button onclick="app.startQuiz()" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-gc-lab via-teal-600 to-emerald-600 hover:from-sky-600 hover:to-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-teal-600/25 hover:shadow-teal-600/35 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 text-lg">
+                    <i class="fa-solid fa-play"></i> Abenteuer Jetzt Starten
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= QUIZ / LAB TRAIL SCREEN ================= -->
+        <div id="screen-quiz" class="hidden flex-col gap-5 transition-all duration-300">
+            
+            <!-- Lab Trail Progress Bar Map -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-md shadow-slate-200/40">
+                <div class="flex items-center justify-between text-xs font-mono text-slate-500 mb-2">
+                    <span class="flex items-center gap-1.5 text-gc-lab font-bold">
+                        <i class="fa-solid fa-route"></i> LAB TRAIL STAGE
+                    </span>
+                    <span id="waypoint-counter-text" class="font-semibold text-slate-700">Station 1 von 15</span>
+                </div>
+
+                <!-- Waypoint Dots Grid -->
+                <div class="grid grid-cols-[repeat(15,minmax(0,1fr))] gap-1 sm:gap-1.5" id="trail-waypoints">
+                    <!-- Dynamic JS rendering of 15 waypoints -->
+                </div>
+            </div>
+
+            <!-- GPS HUD Header (Original Lab Radar Display) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 text-white shadow-md">
+                <div class="flex items-center gap-3">
+                    <div class="relative flex items-center justify-center w-12 h-12 bg-slate-800 rounded-xl border border-slate-700 text-cyan-400 overflow-hidden">
+                        <div class="absolute inset-0 bg-cyan-500/10 rounded-full radar-pulse"></div>
+                        <i id="compass-icon" class="fa-solid fa-compass text-2xl compass-ring relative z-10"></i>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-cyan-300 font-mono font-bold tracking-wider uppercase flex items-center gap-1">
+                            <i class="fa-solid fa-satellite-dish text-cyan-400"></i> GPS Geofence Simulator
+                        </div>
+                        <div id="gps-coords" class="text-xs sm:text-sm font-mono font-bold text-white">N 51° 58.412' E 007° 12.890'</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/50 px-3.5 py-1.5 rounded-xl text-emerald-300">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-mono font-bold" id="geofence-status">Im Radius (12m)</span>
+                </div>
+            </div>
+
+            <!-- Main Question Card (Lab App Location View) -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-5 sm:p-7 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+                
+                <!-- Location Thumbnail Banner -->
+                <div class="bg-gradient-to-r from-sky-50 to-teal-50 border border-sky-100 rounded-2xl p-3.5 mb-5 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-sky-500 text-white flex items-center justify-center font-extrabold text-lg shadow-sm">
+                            <i id="station-icon" class="fa-solid fa-map-pin"></i>
+                        </div>
+                        <div>
+                            <span id="location-name" class="text-sm font-extrabold text-slate-900 block">Standort 1: Die Grundlagen</span>
+                            <span class="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                                <i class="fa-solid fa-circle-dot text-emerald-500 text-[9px]"></i> Freigeschaltet • Geofence OK
+                            </span>
+                        </div>
+                    </div>
+                    <span class="text-xs text-cyan-800 bg-cyan-100/80 px-2.5 py-1 rounded-lg border border-cyan-200 font-mono font-bold">
+                        Q-ID: #LAB-<span id="question-id">01</span>
+                    </span>
+                </div>
+
+                <!-- Question Text -->
+                <h3 id="question-text" class="text-xl sm:text-2xl font-extrabold text-slate-900 mb-6 leading-snug">
+                    Frage lädt...
+                </h3>
+
+                <!-- Answer Choices Grid -->
+                <div id="options-container" class="grid grid-cols-1 gap-3">
+                    <!-- Dynamic answer options rendered here (SHUFFLED) -->
+                </div>
+
+                <!-- Submit / Next Controls -->
+                <div id="action-bar" class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <button id="hint-btn" onclick="app.showHint()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 flex items-center gap-2 transition-all">
+                        <i class="fa-regular fa-lightbulb text-amber-500"></i> Cacher-Hinweis
+                    </button>
+
+                    <button id="next-btn" onclick="app.nextQuestion()" disabled class="px-6 py-2.5 rounded-xl bg-slate-200 text-slate-400 font-bold text-sm flex items-center gap-2 transition-all cursor-not-allowed">
+                        Nächste Station <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Hint Box (Hidden by default) -->
+                <div id="hint-box" class="hidden mt-4 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                    <i class="fa-solid fa-circle-info mr-1 text-amber-600"></i> <span id="hint-text">Cacher-Tipp...</span>
+                </div>
+            </div>
+
+            <!-- Journal Entry Unlocked Card (Official Lab Journal Popup) -->
+            <div id="journal-card" class="hidden bg-gradient-to-r from-teal-500 to-emerald-600 border border-teal-400 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2 text-teal-100 font-mono text-xs font-bold uppercase tracking-wider">
+                        <i class="fa-solid fa-book-bookmark text-amber-300"></i> Tagebuch-Eintrag freigeschaltet!
+                    </div>
+                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-md font-mono">Journal Entry OK</span>
+                </div>
+                <p id="journal-text" class="text-white text-sm leading-relaxed mb-3 font-medium drop-shadow-xs">
+                    Tagebucheintrag der Station...
+                </p>
+                <div class="text-xs font-mono text-teal-100 flex items-center gap-1.5 bg-black/15 px-3 py-1.5 rounded-lg w-fit">
+                    <i class="fa-solid fa-key text-amber-300"></i> Geheim-Passcode Baustein gesichert.
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= RESULTS & STATS SCREEN ================= -->
+        <div id="screen-results" class="hidden flex-col gap-6 transition-all duration-300">
+            
+            <!-- Completion Header Banner -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 text-center relative overflow-hidden shadow-xl shadow-slate-200/50">
+                
+                <!-- Lab Completion Badge -->
+                <div class="w-24 h-24 mx-auto mb-4 bg-gradient-to-tr from-cyan-500 via-teal-400 to-emerald-500 rounded-3xl p-1 shadow-lg shadow-teal-500/30 flex items-center justify-center transform hover:rotate-3 transition-transform">
+                    <div class="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center border-2 border-slate-100 p-2 text-center">
+                        <i class="fa-solid fa-award text-4xl text-teal-600 mb-0.5"></i>
+                        <span class="font-mono text-[9px] uppercase font-extrabold text-slate-800 tracking-tighter">COMPLETED</span>
+                    </div>
+                </div>
+
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-1">Adventure-Lab Absolviert!</h2>
+                <p class="text-slate-500 text-sm mb-6">Gratulation! Du hast alle 10 Standorte des Trainings fehlerfrei abgeschlossen.</p>
+
+                <!-- STATS DASHBOARD GRID -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    <!-- Stat 1: Time -->
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-center">
+                        <div class="text-slate-400 text-xs font-mono font-bold uppercase mb-1">
+                            <i class="fa-regular fa-clock text-gc-lab"></i> Benötigte Zeit
+                        </div>
+                        <div id="stat-time" class="text-2xl font-extrabold font-mono text-slate-900">00:00 Min.</div>
+                    </div>
+
+                    <!-- Stat 2: Score -->
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-center">
+                        <div class="text-slate-400 text-xs font-mono font-bold uppercase mb-1">
+                            <i class="fa-solid fa-check-double text-emerald-600"></i> Ergebnis
+                        </div>
+                        <div id="stat-score" class="text-2xl font-extrabold font-mono text-emerald-600">10 / 10</div>
+                    </div>
+
+                    <!-- Stat 3: Accuracy -->
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl text-center">
+                        <div class="text-slate-400 text-xs font-mono font-bold uppercase mb-1">
+                            <i class="fa-solid fa-bullseye text-amber-500"></i> Quote
+                        </div>
+                        <div id="stat-accuracy" class="text-2xl font-extrabold font-mono text-slate-900">100%</div>
+                    </div>
+                </div>
+
+                <!-- Lab Rating Bar (Official App Feature) -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 max-w-md mx-auto text-center">
+                    <div class="text-xs font-bold text-slate-700 uppercase mb-2 font-mono">Bewerte dieses Adventure Lab:</div>
+                    <div class="flex items-center justify-center gap-2 text-2xl text-amber-400 cursor-pointer" id="rating-stars">
+                        <i class="fa-solid fa-star transition-transform hover:scale-125" onclick="app.setRating(1)"></i>
+                        <i class="fa-solid fa-star transition-transform hover:scale-125" onclick="app.setRating(2)"></i>
+                        <i class="fa-solid fa-star transition-transform hover:scale-125" onclick="app.setRating(3)"></i>
+                        <i class="fa-solid fa-star transition-transform hover:scale-125" onclick="app.setRating(4)"></i>
+                        <i class="fa-solid fa-star transition-transform hover:scale-125" onclick="app.setRating(5)"></i>
+                    </div>
+                    <div id="rating-text" class="text-xs text-slate-500 font-mono mt-1">5 Sterne (Hervorragend!)</div>
+                </div>
+            </div>
+
+            <!-- SECRET BONUS PASSWORD BOX -->
+            <div class="bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 rounded-3xl p-6 text-white shadow-xl shadow-amber-500/20 relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 opacity-15 text-white pointer-events-none">
+                    <i class="fa-solid fa-key text-9xl"></i>
+                </div>
+                
+                <div class="relative z-10">
+                    <div class="flex items-center gap-2 text-amber-100 font-mono text-xs font-bold uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-lock"></i> Freigeschalteter Geheim-Passcode
+                    </div>
+                    <h3 class="text-lg font-bold mb-3 text-white">Dein persönlicher Finale-Code:</h3>
+                    
+                    <div class="bg-white backdrop-blur border border-white/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-900 shadow-inner">
+                        <div class="flex items-center gap-3 font-mono text-lg font-extrabold tracking-wider text-amber-900" id="secret-password-display">
+                            <i class="fa-solid fa-key text-amber-500"></i> LAB-TRAINEE-2026-X7
+                        </div>
+                        <button onclick="app.copyPassword()" id="copy-pass-btn" class="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-regular fa-copy"></i> Passcode Kopieren
+                        </button>
+                    </div>
+                    <p class="text-amber-100 text-xs mt-2">Diesen Passcode benötigst du zum Entsperren des Geocache-Logbuchs.</p>
+                </div>
+            </div>
+
+            <!-- Logbook Container -->
+            <div class="logbook-texture border-2 border-slate-300 rounded-3xl p-6 shadow-md text-slate-800">
+                <div class="flex items-center justify-between border-b border-slate-300 pb-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-book-open text-emerald-800 text-xl"></i>
+                        <h3 class="font-extrabold text-lg text-slate-900 tracking-wide">OFFIZIELLES LAB-LOGBUCH</h3>
+                    </div>
+                    <span class="text-xs font-mono text-slate-600 font-bold" id="logbook-date">Datum: --.--.----</span>
+                </div>
+
+                <!-- Sign Log Form -->
+                <div id="log-form" class="space-y-3">
+                    <div>
+                        <label for="cacher-name" class="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">Dein Cacher Nickname:</label>
+                        <input type="text" id="cacher-name" placeholder="z.B. CacheHunter99" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="cacher-log" class="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">Log-Eintrag (TFTC!):</label>
+                        <textarea id="cacher-log" rows="2" placeholder="TFTC! Tolles Adventure-Lab Quiz!" class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 shadow-sm"></textarea>
+                    </div>
+                    <button onclick="app.submitLog()" class="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-pen-nib"></i> Logbucheintrag Stempeln
+                    </button>
+                </div>
+
+                <!-- Signed Log display -->
+                <div id="log-signed-stamp" class="hidden p-4 bg-emerald-50/90 border-2 border-emerald-500 rounded-2xl relative overflow-hidden stamp-rotate">
+                    <div class="absolute right-3 top-2 opacity-15 text-emerald-900 pointer-events-none font-extrabold text-4xl font-mono">
+                        LOGGED
+                    </div>
+                    <div class="font-mono text-xs text-emerald-900 font-bold mb-1" id="stamp-cacher-name">Cacher: -</div>
+                    <div class="text-sm italic text-slate-800 font-medium" id="stamp-cacher-comment">"TFTC!"</div>
+                    <div class="text-[10px] text-emerald-700 font-mono mt-2 font-bold">✓ Verifizierter Lab-Fund #2026-OK</div>
+                </div>
+            </div>
+
+            <!-- Quiz Answer Review Section -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                <h4 class="font-bold text-base text-slate-900 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-gc-lab"></i> Fragen-Übersicht
+                </h4>
+                <div id="review-list" class="space-y-2 text-xs">
+                    <!-- JS generated review items -->
+                </div>
+            </div>
+
+            <!-- Restart Button -->
+            <button onclick="app.restartQuiz()" class="w-full py-3.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-sm">
+                <i class="fa-solid fa-rotate-right"></i> Quiz Erneut Starten
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Application Footer -->
+    <footer class="bg-white border-t border-slate-200 py-3 px-4 text-center text-xs text-slate-500 font-mono select-none">
+        Ein Geocache von den 4Lanfis • GCBYHWZ
+    </footer>
+
+    <!-- Main Application JavaScript -->
+    <script>
+        // ROT13 Decryption for Answers and Password
+        const rot13 = (str) => {
+            return str.replace(/[a-zA-Z]/g, (c) => {
+                const base = c <= 'Z' ? 65 : 97;
+                return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+            });
+        };
+
+        // Web Audio API Sound Synthesizer
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playClick() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(850, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+            playSuccess() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.5);
+            }
+            playError() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.setValueAtTime(180, now + 0.15);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.3);
+            }
+        }
+
+        const audio = new SoundFX();
+
+        // Question Bank with Station Icons (15 Questions, Answers are ROT13 encrypted)
+        const QUESTIONS = [
+            {
+                id: "01",
+                location: "Station 1: Die Adventure-App",
+                coords: "N 51° 58.412' E 007° 12.890'",
+                icon: "fa-mobile-screen-button",
+                question: "Welche Smartphone-Anwendung wird benötigt, um Adventure Labs vor Ort zu absolvieren?",
+                encOptions: [
+                    "Qvr erthyäer p:trb Ncc",
+                    "Qvr bssvmvryyr Nqiraghre-Yno-Ncc",
+                    "Tbbtyr Zncf",
+                    "Xbzbbg"
+                ],
+                encCorrect: "Qvr bssvmvryyr Nqiraghre-Yno-Ncc",
+                hint: "Groundspeak stellt für Adventure Labs eine eigene eigenständige App bereit.",
+                journal: "Adventure Labs nutzen eine eigenständige Gratis-App von Groundspeak (iOS & Android)."
+            },
+            {
+                id: "02",
+                location: "Station 2: Fundpunkte & Statistik",
+                coords: "N 51° 58.450' E 007° 12.920'",
+                icon: "fa-chart-line",
+                question: "Wie wirken sich die erfolgreich absolvierten Standorte eines Adventure Labs auf deine Geocaching-Statistik aus?",
+                encOptions: [
+                    "Refg jraa qnf trfnzgr Yno sreght vfg, tvog rf 1 Shaq",
+                    "Wrqre Fgnaqbeg mäuyg nyf 1 Shaqchaxg",
+                    "Ynof mäuyra avpug süe qvr Fgngvfgvx",
+                    "Zna reuäyg ahe Fbhiravef"
+                ],
+                encCorrect: "Wrqre Fgnaqbeg mäuyg nyf 1 Shaqchaxg",
+                hint: "Besuchst du ein Lab mit 5 Standorten, erhöht sich dein Fundzähler auf Geocaching.com um 5.",
+                journal: "Klasse! Jeder gelöste Standort gibt genau 1 Fundpunkt auf dein Geocaching-Konto."
+            },
+            {
+                id: "03",
+                location: "Station 3: Geofencing",
+                coords: "N 51° 58.490' E 007° 12.980'",
+                icon: "fa-satellite-dish",
+                question: "Wie überprüft die Adventure-Lab-App vor Ort, ob du dich nah genug an einer Station befindest?",
+                encOptions: [
+                    "Qhepu Fpnaara rvarf DE-Pbqrf",
+                    "Üore qra TCF-Fgnaqbeg ivn Trbsrapvat",
+                    "Qhepu Rvatnor qrf Fgenßraanzraf",
+                    "Üore rva Oyhrgbbgu-Fvtany"
+                ],
+                encCorrect: "Üore qra TCF-Fgnaqbeg ivn Trbsrapvat",
+                hint: "Das Wort verbindet 'GEO' mit einem virtuellen Zaun ('FENCE').",
+                journal: "Geofencing entsperrt die Fragen, sobald sich dein Smartphone im Radius (z.B. 15m) befindet."
+            },
+            {
+                id: "04",
+                location: "Station 4: Was sucht man vor Ort?",
+                coords: "N 51° 58.530' E 007° 13.040'",
+                icon: "fa-binoculars",
+                question: "Was befindet sich in der Regel physisch an den Standorten eines Adventure Labs?",
+                encOptions: [
+                    "Rvar Ghccreqbfr zvg Ybtohpu",
+                    "Xrva culfvfpure Oruäygre, zna fhpug Nagjbegra",
+                    "Rva irefgrpxgre Nnab-Zntarg",
+                    "Rva Gerfbe zvg Mnuyrafpuybff"
+                ],
+                encCorrect: "Xrva culfvfpure Oruäygre, zna fhpug Nagjbegra",
+                hint: "Adventure Labs sind virtueller Natur. Vor Ort schaut man sich Tafeln oder Denkmäler an.",
+                journal: "Kein Suchen in Büschen! An den Standorten beantwortest du Fragen zu echten Objekten vor Ort."
+            },
+            {
+                id: "05",
+                location: "Station 5: Lineare Labs",
+                coords: "N 51° 58.580' E 007° 13.110'",
+                icon: "fa-arrow-down-short-wide",
+                question: "Was zeichnet einen sogenannten 'linearen' Adventure Lab aus?",
+                encOptions: [
+                    "Qvr Fgnaqbegr unora rvar srfgr Ervurasbytr",
+                    "Nyyr Fgnaqbegr yvrtra nhs rvare Yvavr",
+                    "Qnf Yno ung rva Mrvgyvzvg",
+                    "Zna qnes ahe mh Shß trura"
+                ],
+                encCorrect: "Qvr Fgnaqbegr unora rvar srfgr Ervurasbytr",
+                hint: "Linear bedeutet eine vorgegebene Abfolge Schritt für Schritt.",
+                journal: "Bei linearen Labs schaltet das System die nächste Station erst nach korrekter Antwort der vorherigen frei."
+            },
+            {
+                id: "06",
+                location: "Station 6: Das Tagebuch (Journal)",
+                coords: "N 51° 58.620' E 007° 13.180'",
+                icon: "fa-book-bookmark",
+                question: "Was ist ein 'Journal-Eintrag' (Tagebucheintrag) in der Adventure-Lab-App?",
+                encOptions: [
+                    "Qnf össragyvpur Ybtohpu süe nyyr",
+                    "Rvar Mhfngmvasb anpu qre evpugvtra Nagjbeg",
+                    "Qvr Abgvm süe qra Fhccbeg",
+                    "Orfpuervohat qrf aäpufgra Riragf"
+                ],
+                encCorrect: "Rvar Mhfngmvasb anpu qre evpugvtra Nagjbeg",
+                hint: "Im Journal bedankt sich der Owner oder gibt dir spannende Zusatz-Fakten.",
+                journal: "Perfekt! Das Journal öffnet sich nach jeder richtigen Antwort und enthält Zusatz-Informationen."
+            },
+            {
+                id: "07",
+                location: "Station 7: Wichtige Journal-Inhalte",
+                coords: "N 51° 58.670' E 007° 13.250'",
+                icon: "fa-key",
+                question: "Welche wichtige Information ist sehr häufig in den Journal-Einträgen zu finden?",
+                encOptions: [
+                    "Rva Enonggthgfpurva süe Mhoruöe",
+                    "Mnuyra bqre Cnfcpbqrf süe rvara Obahf-Pnpur",
+                    "Qvr Unaqlahzzre qrf Refgryyref",
+                    "Rva Yvax mh Tbbtyr Orjreghatra"
+                ],
+                encCorrect: "Mnuyra bqre Cnfcpbqrf süe rvara Obahf-Pnpur",
+                hint: "Lies das Journal aufmerksam! Dort stehen meist Zahlen für das Bonus-Rätsel.",
+                journal: "Richtig! Viele Owner verknüpfen Adventure Labs mit einem echten physischen 'Bonus Cache' (Mystery)."
+            },
+            {
+                id: "08",
+                location: "Station 8: Der Bonus-Cache",
+                coords: "N 51° 58.710' E 007° 13.310'",
+                icon: "fa-box-archive",
+                question: "Was ist ein 'Bonus-Cache' im Zusammenhang mit einem Adventure Lab?",
+                encOptions: [
+                    "Rva Rkgen-Chaxg nyf Trfpurax",
+                    "Rva rpugre Trbpnpur cnffraq mhz Yno",
+                    "Rva Yno zvg zrue nyf 10 Fgngvbara",
+                    "Rva Cerzvhz-Srngher"
+                ],
+                encCorrect: "Rva rpugre Trbpnpur cnffraq mhz Yno",
+                hint: "Dieser Cache ist auf Geocaching.com als Mystery gelistet und hat eine echte Dose vor Ort.",
+                journal: "Genau! Der Bonus-Cache belohnt dich am Ende des Trails mit einer echten Dose."
+            },
+            {
+                id: "09",
+                location: "Station 9: Technische Voraussetzungen",
+                coords: "N 51° 58.750' E 007° 13.380'",
+                icon: "fa-wifi",
+                question: "Welche technische Voraussetzung sollte beim Spielen eines Adventure Labs vor Ort gegeben sein?",
+                encOptions: [
+                    "Rvar Xnzren zvg bcgvfpurz Mbbz",
+                    "Nxgvir zboyvr Qngraireovaqhat & TCF",
+                    "Rva ASP-säuvtrf Fznegcubar",
+                    "Rvar Ibeno-Nxgvivrehat nz CP"
+                ],
+                encCorrect: "Nxgvir zboyvr Qngraireovaqhat & TCF",
+                hint: "Die App gleicht Antworten und Standorte live mit dem Geocaching-Server ab.",
+                journal: "Da Antworten online geprüft werden, benötigst du mobiles Internet (LTE/5G) und GPS."
+            },
+            {
+                id: "10",
+                location: "Station 10: Nicht-lineare Labs",
+                coords: "N 51° 58.800' E 007° 13.450'",
+                icon: "fa-shuffle",
+                question: "Wodurch unterscheidet sich ein 'nicht-linearer' Adventure Lab von einem linearen?",
+                encOptions: [
+                    "Re ung xrvar Sentra, ahe Sbgbf",
+                    "Fgnaqbegr fvaq va oryvrovtre Ervurasbytr znpnone",
+                    "Re vfg ahe anpugf fcvryone",
+                    "Re xnaa ahe mh mjrvg tryöfg jreqra"
+                ],
+                encCorrect: "Fgnaqbegr fvaq va oryvrovtre Ervurasbytr znpnone",
+                hint: "Nicht-linear bedeutet maximale Flexibilität bei der Wahl deiner Route.",
+                journal: "Hervorragend! Bei nicht-linearen Labs entscheidest du selbst, welche Station du zuerst ansteuerst."
+            },
+            {
+                id: "11",
+                location: "Station 11: Abstandsregel",
+                coords: "N 51° 58.850' E 007° 13.520'",
+                icon: "fa-ruler",
+                question: "Welche Abstandsregel (161m) gilt für die Standorte eines Adventure Labs im Vergleich zu anderen Geocaches?",
+                encOptions: [
+                    "161z Nofgnaq mh nyyra naqrera Pnpurf",
+                    "Rf tvog xrvar Nofgnaqfertry süe Ynof",
+                    "Zvaqrfgraf 500z Nofgnaq",
+                    "Ahe va Angvbanycnexf reynhog"
+                ],
+                encCorrect: "Rf tvog xrvar Nofgnaqfertry süe Ynof",
+                hint: "Labs sind rein virtuell und stören keine physischen Dosen.",
+                journal: "Da Labs keine echten Behälter haben, gibt es hier keine 161m-Abstandsregel zu anderen Caches!"
+            },
+            {
+                id: "12",
+                location: "Station 12: Erstellung",
+                coords: "N 51° 58.910' E 007° 13.600'",
+                icon: "fa-hammer",
+                question: "Wie erhält man die Möglichkeit, selbst einen Adventure Lab zu erstellen?",
+                encOptions: [
+                    "Zna oraögvtg rvara Perqvg iba Tebhaqfcrnx",
+                    "Wrqre xnaa haorteramg Ynof refgryyra",
+                    "Trtra rvar Trovüue vz Trbpnpuvat-Fubc",
+                    "No 10.000 trshaqrara Pnpurf nhgbzngvfpu"
+                ],
+                encCorrect: "Zna oraögvtg rvara Perqvg iba Tebhaqfcrnx",
+                hint: "Groundspeak limitiert die Erstellung, um die Qualität hoch zu halten.",
+                journal: "Man muss sich bewerben oder ausgelost werden, um einen sogenannten 'Credit' von Groundspeak zu erhalten."
+            },
+            {
+                id: "13",
+                location: "Station 13: Indoor Labs",
+                coords: "N 51° 58.950' E 007° 13.670'",
+                icon: "fa-building",
+                question: "Können Adventure Labs auch 'Indoor' (in Gebäuden) stattfinden?",
+                encOptions: [
+                    "Wn, jraa qre Trbsrapr reervpug jveq",
+                    "Arva, fgeratfgraf ireobgra",
+                    "Ahe vz Tebhaqfcrnx Unhcgdhnegvre",
+                    "Arva, qevaara tvog rf avr TCF"
+                ],
+                encCorrect: "Wn, jraa qre Trbsrapr reervpug jveq",
+                hint: "Solange das Smartphone GPS vor der Tür oder am Fenster empfängt...",
+                journal: "Indoor-Labs sind möglich! Der Geofence muss nur so gelegt sein, dass das Signal am/im Gebäude ausreicht."
+            },
+            {
+                id: "14",
+                location: "Station 14: Testmodus",
+                coords: "N 51° 59.020' E 007° 13.730'",
+                icon: "fa-vial-circle-check",
+                question: "Wie können Owner ihren eigenen Adventure Lab vor der Veröffentlichung vor Ort testen?",
+                encOptions: [
+                    "Tne avpug, zna zhff oyvaq ireössragyvpura",
+                    "Üore rvara trarevregra Grfg-Yvax",
+                    "Qhepu Naehs orvz Fhccbeg",
+                    "Rva Erivrjre zhff grfgra"
+                ],
+                encCorrect: "Üore rvara trarevregra Grfg-Yvax",
+                hint: "Im Builder lässt sich eine Vorschau für die App generieren.",
+                journal: "Owner können einen Test-Link bzw. QR-Code nutzen, um ihr Lab in der App privat zu durchlaufen."
+            },
+            {
+                id: "15",
+                location: "Station 15: Bewertungen",
+                coords: "N 51° 59.080' E 007° 13.810'",
+                icon: "fa-star-half-stroke",
+                question: "Wann kann man ein Adventure Lab in der App bewerten (1 bis 5 Sterne)?",
+                encOptions: [
+                    "Anpu qrz refgra Fgnaqbeg",
+                    "Jraa qnf Yno xbzcyrgg notrfpuybffra vfg",
+                    "Ibe qrz Fgneg",
+                    "Orjreghatra tvog rf avpug"
+                ],
+                encCorrect: "Jraa qnf Yno xbzcyrgg notrfpuybffra vfg",
+                hint: "Man soll sich erst ein vollständiges Bild des Abenteuers machen.",
+                journal: "Erst nach dem erfolgreichen Abschluss aller Standorte ploppt die Sterne-Bewertung in der App auf."
+            }
+        ];
+
+        // Core Application Controller
+        class LabQuizApp {
+            constructor() {
+                this.currentIndex = 0;
+                this.score = 0;
+                this.userAnswers = [];
+                this.userRating = 5;
+                this.activeQuestions = []; // Speichert die 10 zufälligen Fragen pro Lauf
+                
+                // Timer Properties
+                this.startTime = null;
+                this.timerInterval = null;
+                this.elapsedSeconds = 0;
+                
+                // DOM Element Cache
+                this.dom = {
+                    screenStart: document.getElementById('screen-start'),
+                    screenQuiz: document.getElementById('screen-quiz'),
+                    screenResults: document.getElementById('screen-results'),
+                    liveTimer: document.getElementById('live-timer'),
+                    scoreCounter: document.getElementById('score-counter'),
+                    trailWaypoints: document.getElementById('trail-waypoints'),
+                    waypointCounterText: document.getElementById('waypoint-counter-text'),
+                    gpsCoords: document.getElementById('gps-coords'),
+                    locationName: document.getElementById('location-name'),
+                    stationIcon: document.getElementById('station-icon'),
+                    questionId: document.getElementById('question-id'),
+                    questionText: document.getElementById('question-text'),
+                    optionsContainer: document.getElementById('options-container'),
+                    nextBtn: document.getElementById('next-btn'),
+                    hintBtn: document.getElementById('hint-btn'),
+                    hintBox: document.getElementById('hint-box'),
+                    hintText: document.getElementById('hint-text'),
+                    journalCard: document.getElementById('journal-card'),
+                    journalText: document.getElementById('journal-text'),
+                    compassIcon: document.getElementById('compass-icon'),
+                    // Stats DOM
+                    statTime: document.getElementById('stat-time'),
+                    statScore: document.getElementById('stat-score'),
+                    statAccuracy: document.getElementById('stat-accuracy'),
+                    reviewList: document.getElementById('review-list'),
+                    secretPasswordDisplay: document.getElementById('secret-password-display')
+                };
+            }
+
+            init() {
+                document.getElementById('logbook-date').innerText = "Datum: " + new Date().toLocaleDateString('de-DE');
+            }
+
+            startTimer() {
+                this.elapsedSeconds = 0;
+                this.startTime = Date.now();
+                if (this.timerInterval) clearInterval(this.timerInterval);
+
+                this.timerInterval = setInterval(() => {
+                    this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+                    const mins = String(Math.floor(this.elapsedSeconds / 60)).padStart(2, '0');
+                    const secs = String(this.elapsedSeconds % 60).padStart(2, '0');
+                    this.dom.liveTimer.innerText = `${mins}:${secs}`;
+                }, 1000);
+            }
+
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            getFormattedTime() {
+                const mins = String(Math.floor(this.elapsedSeconds / 60)).padStart(2, '0');
+                const secs = String(this.elapsedSeconds % 60).padStart(2, '0');
+                return `${mins}:${secs}`;
+            }
+
+            startQuiz() {
+                audio.playClick();
+                this.currentIndex = 0;
+                this.score = 0;
+                this.userAnswers = [];
+                
+                // Alle 15 Fragen in fester Reihenfolge (Station 1 bis 15) verwenden
+                this.activeQuestions = [...QUESTIONS];
+                this.renderWaypointsHeader();
+                this.dom.scoreCounter.innerText = `0 / ${this.activeQuestions.length}`;
+                
+                this.dom.screenStart.classList.add('hidden');
+                this.dom.screenResults.classList.add('hidden');
+                this.dom.screenQuiz.classList.remove('hidden');
+                this.dom.screenQuiz.classList.add('flex');
+
+                this.startTimer();
+                this.loadQuestion(0);
+            }
+
+            renderWaypointsHeader() {
+                this.dom.trailWaypoints.innerHTML = '';
+                for (let i = 0; i < this.activeQuestions.length; i++) {
+                    const dot = document.createElement('div');
+                    dot.id = `wp-${i}`;
+                    dot.className = `h-2 rounded-full transition-all duration-300 ${i === 0 ? 'bg-gc-lab ring-2 ring-sky-300' : 'bg-slate-200'}`;
+                    this.dom.trailWaypoints.appendChild(dot);
+                }
+            }
+
+            loadQuestion(index) {
+                const q = this.activeQuestions[index];
+                this.dom.questionId.innerText = q.id;
+                this.dom.locationName.innerText = q.location;
+                this.dom.gpsCoords.innerText = q.coords;
+                this.dom.questionText.innerText = q.question;
+                this.dom.stationIcon.className = `fa-solid ${q.icon || 'fa-map-pin'}`;
+                this.dom.waypointCounterText.innerText = `Station ${index + 1} von ${this.activeQuestions.length}`;
+
+                // Dynamische Kompass-Rotation basierend auf der Fragenanzahl (360° / 15)
+                const rotation = (index * (360 / this.activeQuestions.length)) + 45;
+                this.dom.compassIcon.style.transform = `rotate(${rotation}deg)`;
+
+                // Reset UI states
+                this.dom.hintBox.classList.add('hidden');
+                this.dom.journalCard.classList.add('hidden');
+                this.dom.nextBtn.disabled = true;
+                this.dom.nextBtn.className = "px-6 py-2.5 rounded-xl bg-slate-200 text-slate-400 font-bold text-sm flex items-center gap-2 transition-all cursor-not-allowed";
+
+                // Update Waypoints map styles
+                for (let i = 0; i < this.activeQuestions.length; i++) {
+                    const wp = document.getElementById(`wp-${i}`);
+                    if (wp) {
+                        if (i < index) {
+                            wp.className = 'h-2 rounded-full transition-all duration-300 bg-emerald-500';
+                        } else if (i === index) {
+                            wp.className = 'h-2 rounded-full transition-all duration-300 bg-gc-lab ring-2 ring-sky-300';
+                        } else {
+                            wp.className = 'h-2 rounded-full transition-all duration-300 bg-slate-200';
+                        }
+                    }
+                }
+
+                // Render and SHUFFLE Answer Choices (Antworten werden weiterhin geshuffelt)
+                this.dom.optionsContainer.innerHTML = '';
+                
+                let shuffledOptions = [...q.encOptions].sort(() => 0.5 - Math.random());
+
+                shuffledOptions.forEach((encOpt, displayIdx) => {
+                    const btn = document.createElement('button');
+                    btn.className = `w-full text-left p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-sm font-semibold transition-all flex items-center justify-between group active:scale-[0.99] shadow-sm`;
+                    
+                    // Wir speichern den verschlüsselten String zur Validierung
+                    btn.dataset.encVal = encOpt;
+                    
+                    btn.onclick = () => this.selectAnswer(encOpt);
+                    
+                    // Text für Anzeige entschlüsseln
+                    const decryptedText = rot13(encOpt);
+
+                    btn.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-lg bg-white border border-slate-200 group-hover:border-slate-300 flex items-center justify-center font-mono font-bold text-xs text-slate-700 shadow-2xs">
+                                ${String.fromCharCode(65 + displayIdx)}
+                            </span>
+                            <span>${decryptedText}</span>
+                        </div>
+                        <i class="fa-regular fa-circle text-slate-300 group-hover:text-slate-400 text-lg flex-shrink-0"></i>
+                    `;
+                    this.dom.optionsContainer.appendChild(btn);
+                });
+            }
+
+            showHint() {
+                audio.playClick();
+                const q = this.activeQuestions[this.currentIndex];
+                this.dom.hintText.innerText = q.hint;
+                this.dom.hintBox.classList.toggle('hidden');
+            }
+
+            selectAnswer(selectedEncOpt) {
+                const q = this.activeQuestions[this.currentIndex];
+                // Überprüfung gegen den verschlüsselten Wert
+                const isCorrect = (selectedEncOpt === q.encCorrect);
+
+                // Record user answer
+                this.userAnswers.push({
+                    questionIndex: this.currentIndex,
+                    selectedVal: selectedEncOpt,
+                    isCorrect: isCorrect
+                });
+
+                if (isCorrect) {
+                    audio.playSuccess();
+                    this.score++;
+                    this.dom.scoreCounter.innerText = `${this.score} / ${this.activeQuestions.length}`;
+
+                    // Update UI buttons styling for correct answer
+                    const buttons = this.dom.optionsContainer.querySelectorAll('button');
+                    buttons.forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.remove('hover:bg-slate-100');
+                        
+                        if (btn.dataset.encVal === q.encCorrect) {
+                            btn.className = "w-full text-left p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950 text-sm font-bold flex items-center justify-between shadow-sm";
+                            btn.querySelector('i').className = "fa-solid fa-circle-check text-emerald-600 text-xl";
+                        } else {
+                            btn.className = "w-full text-left p-4 rounded-2xl bg-slate-50/60 border border-slate-150 text-slate-400 text-sm opacity-50 flex items-center justify-between";
+                        }
+                    });
+
+                    // Show Journal Entry modal content
+                    this.dom.journalText.innerText = q.journal;
+                    this.dom.journalCard.classList.remove('hidden');
+
+                    // Enable Next Button
+                    this.dom.nextBtn.disabled = false;
+                    this.dom.nextBtn.className = "px-6 py-2.5 rounded-xl bg-gradient-to-r from-gc-lab via-teal-600 to-emerald-600 hover:from-sky-600 hover:to-emerald-500 text-white font-bold text-sm flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all transform hover:-translate-y-0.5 cursor-pointer";
+                
+                } else {
+                    // WRONG ANSWER: Reset user back to Question 1!
+                    audio.playError();
+                    
+                    const buttons = this.dom.optionsContainer.querySelectorAll('button');
+                    buttons.forEach(btn => {
+                        btn.disabled = true;
+                        
+                        if (btn.dataset.encVal === selectedEncOpt) {
+                            btn.className = "w-full text-left p-4 rounded-2xl bg-rose-50 border-2 border-rose-500 text-rose-950 text-sm font-semibold flex items-center justify-between";
+                            btn.querySelector('i').className = "fa-solid fa-circle-xmark text-rose-500 text-xl";
+                        }
+                    });
+
+                    // Show failure warning message in journal card temporarily
+                    this.dom.journalText.innerText = "Falsche Antwort! Die Geofence-Regel verlangt einen Neustart bei Station 1.";
+                    this.dom.journalCard.className = "bg-gradient-to-r from-rose-500 to-red-600 border border-rose-400 rounded-2xl p-5 text-white shadow-md relative overflow-hidden";
+                    this.dom.journalCard.classList.remove('hidden');
+
+                    setTimeout(() => {
+                        // Reset journal card styling back to success teal
+                        this.dom.journalCard.className = "hidden bg-gradient-to-r from-teal-500 to-emerald-600 border border-teal-400 rounded-2xl p-5 text-white shadow-md relative overflow-hidden";
+                        this.currentIndex = 0;
+                        this.score = 0;
+                        this.userAnswers = [];
+                        this.dom.scoreCounter.innerText = `0 / ${this.activeQuestions.length}`;
+                        this.loadQuestion(0);
+                    }, 2200);
+                }
+            }
+
+            nextQuestion() {
+                audio.playClick();
+                this.currentIndex++;
+
+                if (this.currentIndex < this.activeQuestions.length) {
+                    this.loadQuestion(this.currentIndex);
+                } else {
+                    this.showResults();
+                }
+            }
+
+            setRating(stars) {
+                audio.playClick();
+                this.userRating = stars;
+                const starContainer = document.getElementById('rating-stars');
+                const starIcons = starContainer.querySelectorAll('i');
+                starIcons.forEach((icon, idx) => {
+                    if (idx < stars) {
+                        icon.className = "fa-solid fa-star transition-transform hover:scale-125 text-amber-400";
+                    } else {
+                        icon.className = "fa-regular fa-star transition-transform hover:scale-125 text-slate-300";
+                    }
+                });
+                const labels = ["1 Stern (Mäßig)", "2 Sterne (Passabel)", "3 Sterne (Gut)", "4 Sterne (Sehr gut!)", "5 Sterne (Hervorragend!)"];
+                document.getElementById('rating-text').innerText = labels[stars - 1];
+            }
+
+            showResults() {
+                this.stopTimer();
+
+                this.dom.screenStart.classList.add('hidden');
+                this.dom.screenQuiz.classList.add('hidden');
+                this.dom.screenQuiz.classList.remove('flex');
+                this.dom.screenResults.classList.remove('hidden');
+                this.dom.screenResults.classList.add('flex');
+
+                // Populate Stats Dashboard
+                const formattedTime = this.getFormattedTime();
+                const accuracy = 100; // Since wrong answers reset to Q1, successful finish is 100%
+
+                this.dom.statTime.innerText = `${formattedTime} Min.`;
+                this.dom.statScore.innerText = `${this.score} / ${this.activeQuestions.length}`;
+                this.dom.statAccuracy.innerText = `${accuracy}%`;
+
+                // ROT13 verschlüsseltes Passwort ("LAB-TRAINEE-2026-FINAL")
+                const encPassword = "YNO-GENVARR-2026-SVANY";
+                const secretCode = rot13(encPassword);
+                
+                this.dom.secretPasswordDisplay.innerHTML = `<i class="fa-solid fa-key text-amber-500"></i> ${secretCode}`;
+
+                // Trigger Canvas Confetti
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 80,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+
+                // Render Review List
+                this.dom.reviewList.innerHTML = '';
+                this.activeQuestions.forEach((q, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 rounded-xl border bg-emerald-50/80 border-emerald-200 text-emerald-950 flex items-start gap-3';
+                    
+                    // Entschlüssele die korrekte Antwort für die Zusammenfassung
+                    const decryptedAnswer = rot13(q.encCorrect);
+                    
+                    item.innerHTML = `
+                        <i class="fa-solid fa-check text-emerald-600 mt-0.5 text-sm"></i>
+                        <div>
+                            <div class="font-bold text-slate-900">${q.location}</div>
+                            <div class="text-slate-600 text-[11px] mt-0.5 font-medium">Lösung: ${decryptedAnswer}</div>
+                        </div>
+                    `;
+                    this.dom.reviewList.appendChild(item);
+                });
+            }
+
+            copyPassword() {
+                const passText = this.dom.secretPasswordDisplay.innerText.trim();
+                const tempInput = document.createElement('input');
+                tempInput.value = passText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+                    audio.playClick();
+                    const btn = document.getElementById('copy-pass-btn');
+                    const origHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check text-white"></i> Kopiert!';
+                    setTimeout(() => btn.innerHTML = origHtml, 2000);
+                } catch (err) {
+                    console.error('Kopieren fehlgeschlagen:', err);
+                }
+                document.body.removeChild(tempInput);
+            }
+
+            submitLog() {
+                audio.playSuccess();
+                const nameInput = document.getElementById('cacher-name').value.trim() || "Anonymer Cacher";
+                const logInput = document.getElementById('cacher-log').value.trim() || "TFTC! Tolles Adventure-Lab Quiz!";
+
+                document.getElementById('stamp-cacher-name').innerText = `Cacher: ${nameInput}`;
+                document.getElementById('stamp-cacher-comment').innerText = `"${logInput}"`;
+
+                document.getElementById('log-form').classList.add('hidden');
+                document.getElementById('log-signed-stamp').classList.remove('hidden');
+
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 50,
+                        spread: 50,
+                        origin: { y: 0.8 }
+                    });
+                }
+            }
+
+            restartQuiz() {
+                audio.playClick();
+                document.getElementById('log-form').classList.remove('hidden');
+                document.getElementById('log-signed-stamp').classList.add('hidden');
+                this.startQuiz();
+            }
+
+            instantWin() {
+                audio.playSuccess();
+                if (!this.startTime) {
+                    this.startTime = Date.now() - 254000;
+                }
+                this.activeQuestions = [...QUESTIONS];
+                const total = this.activeQuestions.length;
+                this.score = total;
+                this.dom.scoreCounter.innerText = `${this.score} / ${total}`;
+                this.showResults();
+            }
+        }
+
+        // Initialize App on window load & setup keyboard cheat listener
+        let app;
+        let typedKeyBuffer = "";
+        window.addEventListener('keydown', (e) => {
+            typedKeyBuffer += e.key.toLowerCase();
+            if (typedKeyBuffer.length > 5) {
+                typedKeyBuffer = typedKeyBuffer.slice(-5);
+            }
+            if (typedKeyBuffer === 'iddqd') {
+                if (app) app.instantWin();
+                typedKeyBuffer = "";
+            }
+        });
+
+        window.onload = function() {
+            app = new LabQuizApp();
+            app.init();
+            app.instantWin();
+        };
+    </script>
+</body>
+</html>
